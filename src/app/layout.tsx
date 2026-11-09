@@ -13,17 +13,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WebDroid — Android-style Phone in Your Browser (WebAssembly)",
+  title: "WebDroid — Android-style Web Phone Simulator",
   description:
-    "A phone that lives in your browser: boot it, unlock it, and install apps from the built-in local Play Store. Fully offline, no install, no cloud — powered by WebAssembly (v86) under the hood.",
+    "An interactive Android-style smartphone experience built with Next.js & React. Install sandboxed on-device apps from the local Droid Store and run an optional WebAssembly x86 Linux terminal.",
   keywords: [
-    "Android phone",
+    "Android simulator",
+    "web OS",
     "WebAssembly",
     "v86",
-    "browser emulator",
-    "local Play Store",
-    "offline",
-    "PWA",
+    "browser phone",
+    "offline PWA",
+    "React",
+    "Next.js",
   ],
   manifest: "/manifest.webmanifest",
   icons: {
@@ -31,9 +32,9 @@ export const metadata: Metadata = {
     apple: "/icons/icon-192.png",
   },
   openGraph: {
-    title: "WebDroid — Android-style Phone in Your Browser",
+    title: "WebDroid — Android-style Web Phone Simulator",
     description:
-      "Boot a phone in your browser, install apps from the local Play Store, all offline via WebAssembly.",
+      "Interactive phone simulator in your browser. Install on-device apps, customize wallpapers, and explore an optional WebAssembly x86 Linux terminal.",
     type: "website",
   },
 };
@@ -42,7 +43,6 @@ export const viewport: Viewport = {
   themeColor: "#040605",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -51,9 +51,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-emerald-400/30 selection:text-white`}
       >
         {children}
       </body>

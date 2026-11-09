@@ -1,14 +1,14 @@
 {
-  "name": "WebDroid — Android Emulator in the Browser",
+  "name": "WebDroid — Android-style Web Phone Simulator",
   "short_name": "WebDroid",
-  "description": "A fully browser-based Android/x86 emulator powered by WebAssembly CPU emulation. No installation, no cloud — runs entirely on your device.",
+  "description": "An interactive Android-style smartphone experience built with Next.js, featuring an on-device app store, sandboxed web apps, and an optional WebAssembly x86 Linux terminal.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#040605",
+  "theme_color": "#040605",
   "categories": ["utilities", "developer", "entertainment"],
   "icons": [
     {

@@ -1,33 +1,35 @@
-/* WebDroid service worker — offline-first app shell + emulator engine cache.
- * Strategy:
- *  - /v86/*  (engine, wasm, bios, demo image): cache-first (immutable build artifacts)
- *  - navigations & everything else same-origin: network-first with cache fallback
- *  - /_next static: stale-while-revalidate
+/* WebDroid Service Worker
+ *
+ * Strategies:
+ *  - App Shell: Precaches lightweight core assets (HTML shell, manifest, icons).
+ *  - /v86/* (WebAssembly, BIOS, and demo ISO): On-demand runtime caching.
+ *    Only cached when Terminal is launched or downloaded, saving ~8 MB on initial visit.
+ *  - Navigations: Network-first with offline cache fallback (validating response.ok).
+ *  - Static assets: Stale-while-revalidate with clean cache eviction.
  */
-const CACHE = 'webdroid-v2';
 
-const PRECACHE = [
+const CACHE_SHELL = 'webdroid-shell-v4';
+const CACHE_RUNTIME = 'webdroid-runtime-v4';
+
+const PRECACHE_SHELL = [
   '/',
   '/manifest.webmanifest',
-  '/v86/libv86.js',
-  '/v86/v86.wasm',
-  '/v86/seabios.bin',
-  '/v86/vgabios.bin',
-  '/v86/images/demo-linux.iso',
+  '/logo.svg',
+  '/icons/favicon-32.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/favicon-32.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE);
-      // Precache individually so one failure doesn't abort the whole install
+      const cache = await caches.open(CACHE_SHELL);
       await Promise.allSettled(
-        PRECACHE.map((url) => cache.add(new Request(url, { cache: 'reload' })))
+        PRECACHE_SHELL.map((url) => cache.add(new Request(url, { cache: 'reload' })))
       );
-      await self.skipWaiting();
+      // Do not force skipWaiting() automatically: allows user to see update prompt
     })()
   );
 });
@@ -35,11 +37,20 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      const names = await caches.keys();
-      await Promise.all(names.filter((n) => n !== CACHE).map((n) => caches.delete(n)));
+      const keys = await caches.keys();
+      const validCaches = new Set([CACHE_SHELL, CACHE_RUNTIME]);
+      await Promise.all(
+        keys.filter((key) => !validCaches.has(key)).map((key) => caches.delete(key))
+      );
       await self.clients.claim();
     })()
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -49,59 +60,76 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never touch Next.js dev internals / HMR
+  // Never intercept Next.js development internals or HMR
   if (url.pathname.startsWith('/_next/webpack-hmr') || url.pathname.includes('__nextjs')) {
     return;
   }
 
-  // Engine artifacts: cache-first (they are versioned by the CACHE name)
+  // 1. /v86/* (Large WebAssembly engine & Linux disk images): On-demand runtime cache
   if (url.pathname.startsWith('/v86/')) {
     event.respondWith(
       (async () => {
-        const cached = await caches.match(request, { ignoreSearch: true });
+        const cache = await caches.open(CACHE_RUNTIME);
+        const cached = await cache.match(request, { ignoreSearch: true });
         if (cached) return cached;
-        const response = await fetch(request);
-        if (response && response.ok) {
-          const cache = await caches.open(CACHE);
-          cache.put(request, response.clone());
+
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        } catch (err) {
+          if (cached) return cached;
+          throw err;
         }
-        return response;
       })()
     );
     return;
   }
 
-  // Navigations: network-first, fall back to cached "/"
+  // 2. Navigation requests: Network-first, fall back to cached shell
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
           const response = await fetch(request);
-          const cache = await caches.open(CACHE);
-          cache.put('/', response.clone());
+          // Only update cached shell when response is completely successful (prevent caching 404/500)
+          if (response && response.ok) {
+            const cache = await caches.open(CACHE_SHELL);
+            cache.put('/', response.clone());
+          }
           return response;
-        } catch (e) {
-          const cached = (await caches.match(request)) || (await caches.match('/'));
+        } catch {
+          const cache = await caches.open(CACHE_SHELL);
+          const cached = (await cache.match(request)) || (await cache.match('/'));
           if (cached) return cached;
-          return new Response('Offline and not cached yet.', { status: 503 });
+          return new Response('Offline and shell is not cached yet.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' },
+          });
         }
       })()
     );
     return;
   }
 
-  // Everything else: stale-while-revalidate
+  // 3. Static assets & bundles: Stale-while-revalidate
   event.respondWith(
     (async () => {
-      const cache = await caches.open(CACHE);
+      const cache = await caches.open(CACHE_SHELL);
       const cached = await cache.match(request);
-      const network = fetch(request)
+
+      const fetchPromise = fetch(request)
         .then((response) => {
-          if (response && response.ok) cache.put(request, response.clone());
+          if (response && response.ok) {
+            cache.put(request, response.clone());
+          }
           return response;
         })
-        .catch(() => undefined);
-      return cached || (await network) || new Response('Offline', { status: 503 });
+        .catch(() => cached);
+
+      return cached || fetchPromise;
     })()
   );
 });

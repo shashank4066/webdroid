@@ -1,39 +1,25 @@
 # WebDroid 📱
 
-> **Android-style Phone in Your Browser (WebAssembly & Next.js)**
+> **Android-style Web Phone Simulator (Next.js, React, & WebAssembly)**
 
-WebDroid is a browser-based Android smartphone emulator and OS experience. Boot it, unlock it, customize wallpapers, and install and run apps and games directly from the built-in local Play Store. Fully offline-capable, zero installation required, and powered by modern web technologies including WebAssembly (v86), Next.js, React, and Tailwind CSS.
+[![CI](https://github.com/shashank4066/webdroid/actions/workflows/ci.yml/badge.svg)](https://github.com/shashank4066/webdroid/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![Node: >=20.9.0](https://img.shields.io/badge/Node->=20.9.0-blue.svg)](https://nodejs.org/)
+
+WebDroid is a browser-based Android-style smartphone simulation built with React and Next.js. It features a realistic phone chassis with physical hardware buttons, status bar, navigation bar, lock screen, on-device app store (**Droid Store**), and sandboxed web apps stored offline in IndexedDB. An optional **WASM Terminal** app boots a real 64 MB x86 Buildroot Linux virtual machine inside WebAssembly using [v86](https://github.com/copy/v86).
 
 ---
 
-## ✨ Features
+## 📸 Architecture & Capabilities
 
-- **Realistic Phone Frame & Interactions:**
-  - Interactive device frame with dynamic scaling
-  - Status bar with clock, battery level, Wi-Fi, and signal indicators
-  - Punch-hole camera and physical buttons (Power, Volume Up / Down)
-  - Android-style navigation (Back, Home, Recents)
-  - Realistic boot splash animation and lock screen swipe to unlock
-  - Notification shade and toast notification system
+WebDroid is **not** an Android operating system emulator in its entirety—it is an interactive, client-side Android phone experience designed for web browsers:
 
-- **Local Play Store & App Ecosystem:**
-  - Browse featured, top, and categorized apps and games
-  - Install, launch, update, and uninstall apps locally
-  - Offline app storage powered by IndexedDB
-  - Built-in system utilities: Settings, Wallpapers, Device Info
-
-- **Interactive Apps & Games:**
-  - Built-in games and utilities running smoothly in the simulated runtime
-  - Responsive app window manager with multi-tasking / Recents view
-  - Context menus and app drawer with search
-
-- **Modern Tech Stack:**
-  - **Framework:** [Next.js](https://nextjs.org/) (App Router, React 19)
-  - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & Radix UI
-  - **State Management:** Zustand
-  - **Storage:** IndexedDB (`idb-keyval` / custom IDB layer)
-  - **Virtualization / Emulation:** [v86](https://github.com/copy/v86) (x86 WebAssembly emulator)
-  - **Offline Support:** Progressive Web App (PWA) with Service Worker
+- **Phone Shell (React 19 & Next.js 16):** Emulates an Android smartphone interface with dynamic status bar, clock, battery status (via Battery Status API), three-button navigation bar, lock screen gesture unlock, app drawer, and recents multi-tasking view.
+- **Sandboxed App Runtime:** Apps run inside sandboxed `<iframe>` instances with `sandbox="allow-scripts allow-pointer-lock"`. Crucially, `allow-same-origin` is omitted to isolate apps from the host DOM and parent storage.
+- **On-Device Storage Bridge:** Apps use a `postMessage` storage bridge that transparently maps `window.localStorage` calls to isolated per-app key-value stores inside IndexedDB.
+- **Droid Store (Local Catalog):** Browse, install, update, and uninstall bundled on-device app packages. Downloads and installations are cancelable via `AbortController` and require zero network connectivity.
+- **WebAssembly x86 Linux Guest (Optional):** The built-in WASM Terminal app runs [v86](https://github.com/copy/v86) to boot a 5.7 MB Buildroot Linux demo image on an emulated 32-bit x86 PC with 64 MB RAM, featuring mobile touch keyboard forwarding and background CPU pausing.
+- **Offline PWA:** Progressive Web App service worker with on-demand runtime caching for WebAssembly binaries and demo images (saving initial download bandwidth).
 
 ---
 
@@ -41,79 +27,86 @@ WebDroid is a browser-based Android smartphone emulator and OS experience. Boot 
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher) or [Bun](https://bun.sh/)
-- npm, yarn, pnpm, or bun
+- **Node.js**: `v20.9.0` or higher
+- **Package Manager**: `npm` (v10+), `pnpm`, or `bun`
 
 ### Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/<your-username>/webdroid.git
+   git clone https://github.com/shashank4066/webdroid.git
    cd webdroid
    ```
 
 2. **Install dependencies:**
    ```bash
-   bun install
-   # or
    npm install
    ```
 
-3. **Run the development server:**
+3. **Start the development server:**
    ```bash
-   bun dev
-   # or
    npm run dev
    ```
 
-4. **Open in browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000) to start using WebDroid.
+4. **Open in your browser:**
+   Visit [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🛠️ Building for Production
+## 🛠️ Available Scripts
 
-To create an optimized production build:
+- `npm run dev`: Starts the Next.js development server.
+- `npm run build`: Compiles the project and generates an optimized static export in `out/`.
+- `npm run start`: Starts the Next.js production server.
+- `npm run lint`: Runs ESLint checks with core web vitals and TypeScript rules.
+- `npm run typecheck`: Validates TypeScript types across the codebase with `tsc --noEmit`.
+- `npm test`: Executes unit tests using Node's native test runner (`node:test`).
 
-```bash
-bun run build
-# or
-npm run build
-```
+---
 
-To start the production server:
+## 🔒 Security & Sandboxing
 
-```bash
-bun start
-# or
-npm start
-```
+WebDroid isolates untrusted web applications using browser-native sandboxing:
+
+1. **Strict Iframe Sandboxing:** App windows execute with `sandbox="allow-scripts allow-pointer-lock"`. Without `allow-same-origin`, app iframes have an opaque origin (`null`), preventing access to:
+   - Parent `window` or `document` objects
+   - Host cookies, session storage, and parent IndexedDB databases
+   - Modification of their own sandbox attributes
+2. **Storage Isolation:** App calls to `localStorage` are routed through a sandboxed in-memory polyfill that syncs via `postMessage` to per-app scoped storage partitions in IndexedDB.
+3. **HTTP Security Headers:** Configured in `next.config.ts` including `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and restrictive `Permissions-Policy`.
 
 ---
 
 ## 📂 Project Structure
 
 ```
-├── prisma/               # Database schema (if applicable)
-├── public/               # Static assets, icons, v86 wasm & BIOS binaries
-│   ├── icons/            # App icons and PWA assets
-│   ├── v86/              # WebAssembly x86 emulator engine and binaries
-│   └── sw.js             # Service Worker for offline PWA support
+├── .github/workflows/    # GitHub Actions CI workflow
+├── public/
+│   ├── icons/            # App icons and PWA manifest assets
+│   ├── v86/              # v86 WebAssembly x86 emulator engine, BIOS, and Linux ISO
+│   ├── manifest.webmanifest # PWA Web App Manifest
+│   └── sw.js             # Offline-first Service Worker with on-demand engine caching
 ├── src/
-│   ├── app/              # Next.js App Router pages and layout
-│   ├── components/
-│   │   ├── ui/           # Radix UI and Shadcn components
-│   │   └── webdroid/     # Android OS UI components (Phone, Launcher, Play Store)
-│   ├── hooks/            # Custom React hooks
-│   ├── lib/
-│   │   ├── apps/         # App store catalog, bundled apps & metadata
-│   │   └── idb.ts        # IndexedDB storage utilities
-│   └── types/            # TypeScript definitions
+│   ├── app/              # Next.js App Router (layout, styling, root page)
+│   ├── components/webdroid/
+│   │   ├── os/           # Phone OS components (launcher, chrome, store, drawer, recents)
+│   │   ├── service-worker-register.tsx # Production-only SW registration with update alerts
+│   │   └── webdroid-phone.tsx # Main phone chassis with responsive desktop & mobile layouts
+│   ├── hooks/            # useNow, useBattery, useLongPress hooks
+│   └── lib/
+│       ├── apps/         # App store catalog, bundled HTML apps, and metadata
+│       ├── idb.ts        # IndexedDB connection cache and isolated app storage
+│       └── utils.ts      # CSS and class merging utilities
+├── tests/                # Unit test suites (node:test)
+├── THIRD_PARTY_NOTICES.md# Open source license notices (v86 BSD, Linux GPL-2.0, etc.)
 └── package.json
 ```
 
 ---
 
-## 📄 License
+## 📄 License & Attribution
 
-This project is open source and available under the [MIT License](LICENSE).
+- WebDroid source code is licensed under the [MIT License](LICENSE).
+- The x86 virtualization engine ([v86](https://github.com/copy/v86)) is licensed under the BSD 2-Clause License.
+- The Buildroot Linux demo image (`demo-linux.iso`) contains the Linux kernel and userspace binaries licensed under the GNU General Public License v2.0 (GPL-2.0).
+- See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full attribution and license texts.

@@ -1,4 +1,4 @@
-import { page } from './page';
+import { page } from './page.ts';
 
 /**
  * Productivity apps bundled with the local Play Store.

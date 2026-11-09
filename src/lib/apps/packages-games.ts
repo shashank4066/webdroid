@@ -1,4 +1,4 @@
-import { page } from './page';
+import { page } from './page.ts';
 
 /**
  * Games and creative apps bundled with the local Play Store.

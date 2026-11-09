@@ -83,7 +83,7 @@ export const useOS = create<WebDroidState>()(
       screen: 'home',
       openApps: [],
       activeApp: null,
-      installedIds: [],
+      installedIds: ['droidstore', 'settings'],
       wallpaper: 'aurora',
       toastId: 0,
       toastText: null,
@@ -115,7 +115,9 @@ export const useOS = create<WebDroidState>()(
       setInstalled: (ids) => set({ installedIds: ids }),
       addInstalled: (id) => {
         const { installedIds } = get();
-        if (!installedIds.includes(id)) set({ installedIds: [...installedIds, id] });
+        if (!installedIds.includes(id)) {
+          set({ installedIds: [...installedIds, id] });
+        }
       },
       removeInstalled: (id) => {
         const { installedIds, openApps, activeApp } = get();
@@ -131,22 +133,21 @@ export const useOS = create<WebDroidState>()(
       bumpVolume: (delta) =>
         set((s) => ({
           volume: Math.min(100, Math.max(0, s.volume + delta)),
-          volumeAt: Date.now(),
+          volumeAt: s.volumeAt + 1,
         })),
     }),
     {
       name: 'webdroid-os',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ installedIds: s.installedIds, wallpaper: s.wallpaper }),
+      // Only persist user visual preferences in localStorage.
+      // Installed apps are stored strictly in on-device IndexedDB as the single source of truth.
+      partialize: (s) => ({ wallpaper: s.wallpaper }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<WebDroidState>;
         return {
           ...current,
           wallpaper: typeof p.wallpaper === 'string' ? p.wallpaper : current.wallpaper,
-          installedIds: Array.isArray(p.installedIds)
-            ? p.installedIds.filter((x) => typeof x === 'string')
-            : current.installedIds,
         };
       },
     }

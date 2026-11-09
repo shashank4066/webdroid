@@ -10,7 +10,6 @@ import {
   Music,
   Palette,
   Package,
-  Play,
   Settings,
   SquareTerminal,
   StickyNote,
@@ -29,7 +28,8 @@ const TILES: Record<string, { tile: string; Icon: LucideIcon }> = {
   paint: { tile: 'from-fuchsia-400 to-rose-600', Icon: Palette },
   music: { tile: 'from-violet-400 to-purple-700', Icon: Music },
   terminal: { tile: 'from-zinc-600 to-zinc-800', Icon: SquareTerminal },
-  playstore: { tile: 'from-[#31b06d] to-[#17804b]', Icon: Play },
+  droidstore: { tile: 'from-[#10b981] to-[#047857]', Icon: Package },
+  playstore: { tile: 'from-[#10b981] to-[#047857]', Icon: Package },
   settings: { tile: 'from-stone-500 to-stone-700', Icon: Settings },
 };
 
